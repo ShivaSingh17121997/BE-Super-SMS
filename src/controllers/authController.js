@@ -73,6 +73,28 @@ const getMe = asyncHandler(async (req, res) => {
       baseUser.section = student.section;
       baseUser.studentId = student._id;
     }
+  } else if (user.role === 'teacher') {
+    const mongoose = require('mongoose');
+    const Teacher = require('../models/Teacher');
+    const ClassTeacherAssignment = require('../models/ClassTeacherAssignment');
+    
+    // Find the teacher profile
+    const teacher = await Teacher.findOne({ userId: user._id });
+    if (teacher) {
+      // Check if they are a class teacher
+      const assignment = await ClassTeacherAssignment.findOne({ 
+        teacherId: teacher._id, 
+        isActive: true 
+      });
+      
+      if (assignment) {
+        baseUser.isClassTeacher = true;
+        baseUser.class = assignment.class;
+        baseUser.section = assignment.section;
+      } else {
+        baseUser.isClassTeacher = false;
+      }
+    }
   }
 
   res.status(200).json({

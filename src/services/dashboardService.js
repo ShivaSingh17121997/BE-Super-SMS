@@ -8,6 +8,8 @@ const AttendanceRecord = require('../models/AttendanceRecord');
 const Homework = require('../models/Homework');
 const Notice = require('../models/Notice');
 
+const Timetable = require('../models/Timetable');
+
 /**
  * Dashboard stats for Super Admin.
  * Returns global aggregated statistics across all schools.
@@ -165,4 +167,59 @@ const getSchoolAdminStats = async (schoolId) => {
   };
 };
 
-module.exports = { getSuperAdminStats, getSchoolAdminStats };
+/**
+ * Dashboard stats for Teacher.
+ */
+const getTeacherStats = async (userId, schoolId) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = days[today.getDay()];
+
+  // Get teacher profile to get their ID if we only have userId
+  const teacher = await Teacher.findOne({ userId, schoolId });
+  const teacherId = teacher ? teacher._id : null;
+
+  const [
+    todaysClasses,
+    activeHomework,
+    attendanceRecords,
+  ] = await Promise.all([
+    // Today's classes for this teacher
+    teacherId ? Timetable.find({ teacher: teacherId, day: dayName, schoolId }) : [],
+
+    // Active homework assigned by this teacher
+    Homework.countDocuments({ assignedBy: userId, schoolId, dueDate: { $gte: today } }),
+
+    // Attendance records by this teacher for today
+    AttendanceRecord.find({ 
+      schoolId, 
+      date: { $gte: today, $lt: tomorrow } 
+    }).select('class section'),
+  ]);
+
+  // Pending attendance: classes today that don't have records
+  const markedClasses = new Set(attendanceRecords.map(r => `${r.class}-${r.section}`));
+  let pendingAttendanceCount = 0;
+  
+  const uniqueTodayClasses = new Set();
+  todaysClasses.forEach(c => {
+    const key = `${c.class}-${c.section}`;
+    if (!markedClasses.has(key) && !uniqueTodayClasses.has(key)) {
+      pendingAttendanceCount++;
+      uniqueTodayClasses.add(key);
+    }
+  });
+
+  return {
+    todayClassesCount: todaysClasses.length,
+    activeHomeworkCount: activeHomework,
+    pendingAttendanceCount,
+    pendingEvaluationsCount: 0, // Placeholder
+  };
+};
+
+module.exports = { getSuperAdminStats, getSchoolAdminStats, getTeacherStats };

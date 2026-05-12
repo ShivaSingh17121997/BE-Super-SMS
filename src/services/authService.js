@@ -58,6 +58,25 @@ const login = async (email, password) => {
       baseUser.section = student.section;
       baseUser.studentId = student._id;
     }
+  } else if (user.role === 'teacher') {
+    const Teacher = mongoose.models.Teacher || mongoose.model('Teacher');
+    const ClassTeacherAssignment = mongoose.models.ClassTeacherAssignment || mongoose.model('ClassTeacherAssignment');
+    
+    const teacher = await Teacher.findOne({ userId: user._id });
+    if (teacher) {
+      const assignment = await ClassTeacherAssignment.findOne({ 
+        teacherId: teacher._id, 
+        isActive: true 
+      });
+      
+      if (assignment) {
+        baseUser.isClassTeacher = true;
+        baseUser.class = assignment.class;
+        baseUser.section = assignment.section;
+      } else {
+        baseUser.isClassTeacher = false;
+      }
+    }
   }
 
   // Return exactly what the frontend expects

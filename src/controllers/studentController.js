@@ -29,38 +29,35 @@ const getStudents = asyncHandler(async (req, res) => {
   if (req.user.role === 'teacher') {
     const Teacher = require('../models/Teacher');
     const Timetable = require('../models/Timetable');
-    let ClassTeacher;
-    try {
-      ClassTeacher = require('../models/ClassTeacher');
-    } catch(e) {
-      // Model might not exist yet if not loaded, fallback to mongoose.models
-      const mongoose = require('mongoose');
-      ClassTeacher = mongoose.models.ClassTeacher || null;
-    }
+    const ClassTeacherAssignment = require('../models/ClassTeacherAssignment');
 
     const teacherProfile = await Teacher.findOne({ email: req.user.email });
     if (teacherProfile) {
-      const timetables = await Timetable.find({ teacher: teacherProfile._id });
-      const classTeachers = ClassTeacher ? await ClassTeacher.find({ teacher: teacherProfile._id }) : [];
+      const [timetables, classAssignments] = await Promise.all([
+        Timetable.find({ teacher: teacherProfile._id, schoolId: teacherProfile.schoolId }),
+        ClassTeacherAssignment.find({ teacherId: teacherProfile._id, schoolId: teacherProfile.schoolId, isActive: true })
+      ]);
 
       const uniqueClasses = new Set();
-      timetables.forEach(t => uniqueClasses.add(`${t.class}-${t.section}`));
-      classTeachers.forEach(ct => uniqueClasses.add(`${ct.class}-${ct.section}`));
+      timetables.forEach(t => uniqueClasses.add(`${t.class}|${t.section}`));
+      classAssignments.forEach(ca => uniqueClasses.add(`${ca.class}|${ca.section}`));
 
       const classesCondition = Array.from(uniqueClasses).map(c => {
-        const [cls, sec] = c.split('-');
+        const [cls, sec] = c.split('|');
         return { class: cls, section: sec };
       });
 
       if (classesCondition.length > 0) {
         if (query.$or) {
+          // If there's already a search or other $or condition, intersect it with class visibility
           query.$and = [{ $or: query.$or }, { $or: classesCondition }];
           delete query.$or;
         } else {
           query.$or = classesCondition;
         }
       } else {
-        query._id = null; // No classes assigned, see no students
+        // No classes assigned, see no students
+        query._id = null;
       }
     } else {
       query._id = null;
