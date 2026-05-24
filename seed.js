@@ -3,15 +3,21 @@
  * Creates the Super Admin user if not already present.
  */
 const mongoose = require('mongoose');
+const path = require('path');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const User = require('./src/models/User');
 
 const seedSuperAdmin = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI is not defined in .env file');
+    }
+
+    await mongoose.connect(uri);
     console.log('✅ Connected to MongoDB');
 
     const email = 'superadmin@supersmp.com';

@@ -40,6 +40,10 @@ const staffSchema = new mongoose.Schema(
       ref: 'School',
       required: [true, 'School ID is required'],
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true,

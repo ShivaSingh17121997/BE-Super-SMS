@@ -166,7 +166,42 @@ const resetUserPassword = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Please provide a new password');
   }
 
-  const targetUser = await User.findById(targetUserId);
+  const mongoose = require('mongoose');
+  if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+    throw new ApiError(400, 'Invalid ID format');
+  }
+
+  let targetUser = await User.findById(targetUserId);
+
+  // If not found in User, check if this is a profile ID (Teacher, Student, Staff)
+  if (!targetUser) {
+    const Teacher = require('../models/Teacher');
+    const teacher = await Teacher.findById(targetUserId);
+    if (teacher && teacher.userId) {
+      targetUser = await User.findById(teacher.userId);
+    }
+  }
+
+  if (!targetUser) {
+    const Student = require('../models/Student');
+    const student = await Student.findById(targetUserId);
+    if (student && student.userId) {
+      targetUser = await User.findById(student.userId);
+    }
+  }
+
+  if (!targetUser) {
+    const Staff = require('../models/Staff');
+    const staff = await Staff.findById(targetUserId);
+    if (staff) {
+      if (staff.userId) {
+        targetUser = await User.findById(staff.userId);
+      }
+      if (!targetUser && staff.email) {
+        targetUser = await User.findOne({ email: staff.email.toLowerCase() });
+      }
+    }
+  }
 
   if (!targetUser) {
     throw new ApiError(404, 'User not found');

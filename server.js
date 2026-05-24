@@ -2,12 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const dotenv = require('dotenv');
-const connectDB = require('./src/config/db');
-const errorHandler = require('./src/middleware/errorHandler');
 
 // Load env vars
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const connectDB = require('./src/config/db');
+const errorHandler = require('./src/middleware/errorHandler');
 
 // Connect to database
 connectDB();
@@ -55,6 +57,8 @@ app.use('/api/class-teachers', require('./src/routes/classTeacherRoutes'));
 app.use('/api/dashboard', require('./src/routes/dashboardRoutes'));
 app.use('/api/timetable', require('./src/routes/timetableRoutes'));
 app.use('/api/seed', require('./src/routes/seedRoutes'));
+app.use('/api/roadmap', require('./src/routes/roadmapRoutes'));
+app.use('/api/question-bank', require('./src/routes/questionBankRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
