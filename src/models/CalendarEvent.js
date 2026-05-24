@@ -49,6 +49,10 @@ const calendarEventSchema = new mongoose.Schema(
   }
 );
 
+calendarEventSchema.virtual('date').get(function () {
+  return this.startDate ? this.startDate.toISOString().split('T')[0] : undefined;
+});
+
 calendarEventSchema.index({ schoolId: 1, startDate: 1 });
 
 module.exports = mongoose.model('CalendarEvent', calendarEventSchema);
