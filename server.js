@@ -24,7 +24,20 @@ app.use(helmet());
 // CORS
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
-  : ['http://localhost:3000'];
+  : [];
+
+// Automatically allow local development origins for ease of testing
+const devOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'http://localhost:5174',
+];
+devOrigins.forEach((origin) => {
+  if (!allowedOrigins.includes(origin)) {
+    allowedOrigins.push(origin);
+  }
+});
 
 app.use(
   cors({
@@ -32,10 +45,12 @@ app.use(
       // Allow requests with no origin (like mobile apps, postman, curl)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        // Log the blocked origin so developers can see it in server logs
+        console.warn(`⚠️ CORS blocked request from origin: ${origin}`);
+        callback(null, false);
       }
     },
     credentials: true,
