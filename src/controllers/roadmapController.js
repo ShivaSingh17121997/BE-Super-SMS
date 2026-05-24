@@ -7,7 +7,7 @@ const LessonPlan = require('../models/LessonPlan');
 exports.createOrUpdateRoadmap = async (req, res, next) => {
   try {
     const { className, subject, academicYear, chapters } = req.body;
-    const school = req.user.school;
+    const school = req.user.schoolId;
 
     if (!className || !subject || !academicYear || !chapters || !chapters.length) {
       return res.status(400).json({ success: false, message: 'Please provide all required fields including chapters' });
@@ -34,7 +34,7 @@ exports.createOrUpdateRoadmap = async (req, res, next) => {
 exports.getRoadmap = async (req, res, next) => {
   try {
     const { className, subject, academicYear } = req.params;
-    const school = req.user.school;
+    const school = req.user.schoolId;
 
     const roadmap = await CourseRoadmap.findOne({ school, className, subject, academicYear });
     if (!roadmap) {
@@ -53,7 +53,7 @@ exports.getRoadmap = async (req, res, next) => {
 exports.updateLessonPlanProgress = async (req, res, next) => {
   try {
     const { className, section, subject, roadmapId, chapterId, status, notes } = req.body;
-    const school = req.user.school;
+    const school = req.user.schoolId;
     const teacher = req.user.id;
 
     if (!className || !section || !subject || !roadmapId || !chapterId || !status) {
@@ -99,7 +99,7 @@ exports.updateLessonPlanProgress = async (req, res, next) => {
 exports.getCourseProgress = async (req, res, next) => {
   try {
     const { className, section, subject, academicYear } = req.params;
-    const school = req.user.school;
+    const school = req.user.schoolId;
 
     const roadmap = await CourseRoadmap.findOne({ school, className, subject, academicYear });
     if (!roadmap) {
@@ -129,6 +129,8 @@ exports.getCourseProgress = async (req, res, next) => {
         chapterId: chap._id,
         chapterName: chap.chapterName,
         expectedDays: chap.expectedDays,
+        term: chap.term,
+        order: chap.order,
         status,
         plan: plan || null
       };
@@ -143,6 +145,7 @@ exports.getCourseProgress = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {
+        _id: roadmap._id,
         totalExpectedDays,
         completedDays,
         percentCompleted,
@@ -150,6 +153,31 @@ exports.getCourseProgress = async (req, res, next) => {
         chapters: detailedChapters
       }
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Delete Course Roadmap and its lesson plans
+// @route   DELETE /api/roadmap/:className/:subject/:academicYear
+// @access  Private (Admin/Principal)
+exports.deleteRoadmap = async (req, res, next) => {
+  try {
+    const { className, subject, academicYear } = req.params;
+    const school = req.user.schoolId;
+
+    const roadmap = await CourseRoadmap.findOne({ school, className, subject, academicYear });
+    if (!roadmap) {
+      return res.status(404).json({ success: false, message: 'Course Roadmap not found' });
+    }
+
+    // Delete associated Lesson Plans
+    await LessonPlan.deleteMany({ school, className, subject, roadmap: roadmap._id });
+
+    // Delete Roadmap
+    await CourseRoadmap.deleteOne({ _id: roadmap._id });
+
+    res.status(200).json({ success: true, message: 'Course Roadmap and associated lesson plans deleted successfully' });
   } catch (err) {
     next(err);
   }

@@ -33,14 +33,15 @@ const getNotice = asyncHandler(async (req, res) => {
 
 const createNotice = asyncHandler(async (req, res) => {
   req.body.postedBy = req.user._id;
-  const notice = await Notice.create(req.body);
+  let notice = await Notice.create(req.body);
+  notice = await notice.populate('postedBy', 'name');
   res.status(201).json({ success: true, data: notice });
 });
 
 const updateNotice = asyncHandler(async (req, res) => {
   const query = { _id: req.params.id };
   if (req.query.schoolId) query.schoolId = req.query.schoolId;
-  const notice = await Notice.findOneAndUpdate(query, req.body, { new: true, runValidators: true });
+  const notice = await Notice.findOneAndUpdate(query, req.body, { new: true, runValidators: true }).populate('postedBy', 'name');
   if (!notice) throw new ApiError(404, 'Notice not found');
   res.status(200).json({ success: true, data: notice });
 });

@@ -59,6 +59,10 @@ const noticeSchema = new mongoose.Schema(
   }
 );
 
+noticeSchema.virtual('author').get(function () {
+  return this.postedBy;
+});
+
 noticeSchema.index({ schoolId: 1, date: -1 });
 
 module.exports = mongoose.model('Notice', noticeSchema);
