@@ -45,7 +45,12 @@ app.use(
       // Allow requests with no origin (like mobile apps, postman, curl)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      const isAllowedDomain =
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.netlify.app') ||
+        origin.endsWith('.onrender.com');
+
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || isAllowedDomain) {
         callback(null, true);
       } else {
         // Log the blocked origin so developers can see it in server logs
